@@ -1,0 +1,66 @@
+FROM ubi8:latest
+
+LABEL maintainer="Ivan.Warlock@ibm.com"
+
+#Env Vars
+ARG NODE_VER
+ENV NODE_VERSION=$NODE_VER
+ARG NODE_PORT
+ENV NODEJS_PORT=$NODE_PORT
+
+#Libraries and utilities
+RUN yum -y update --nobest
+RUN yum -y install gcc-c++ make
+RUN yum -y install git
+RUN yum clean all
+
+#Instalation of sudo from binary 
+RUN rpm -i https://github.com/sudo-project/sudo/releases/download/SUDO_1_9_5p2/sudo-1.9.5-3.el8.x86_64.rpm
+RUN sudo -V
+
+RUN dnf update -y && dnf install \
+make \
+systemd-libs \
+systemd-udev \
+systemd-pam \
+gcc \
+gcc-c++ \
+openssl-devel \
+bzip2-devel \
+nano \
+nc \
+wget -y
+
+############################################Python#####################################################
+RUN wget -O /opt/Python-3.7.9.tgz https://www.python.org/ftp/python/3.7.9/Python-3.7.9.tgz && mkdir /opt/Python-3.7.9 && tar zxvf /opt/Python-3.7.9.tgz -C /opt && rm /opt/Python-3.7.9.tgz && cd /opt/Python-3.7.9 && ./configure --enable-optimizations && make altinstall
+RUN pip3.7 install --upgrade pip
+############################################NodeJS&&Python#####################################################
+RUN echo installing node version: $NODE_VERSION
+RUN wget https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.gz
+RUN tar --strip-components 1 -xzf node-v* -C /usr/local
+RUN node --version
+
+#from local Repository
+COPY . /app
+
+#list the files inside app folder
+RUN ls -1a /app
+
+#define work space
+WORKDIR /app
+
+RUN chgrp -R 0 /app && chmod -R g+rwX /app
+
+# confirm installation
+RUN node -v
+RUN npm -v
+
+RUN npm config set unsafe-perm true
+
+RUN npm install --loglevel verbose
+
+#expose app port
+EXPOSE $NODEJS_PORT
+
+#command at the starting
+CMD node app.js
